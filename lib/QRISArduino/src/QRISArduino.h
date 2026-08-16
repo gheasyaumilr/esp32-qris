@@ -14,9 +14,8 @@
 #include <WiFiClientSecure.h>
 #include <ArduinoJson.h>
 #include <PNGdec.h>
-#include <Adafruit_GFX.h>
-#include <Adafruit_ILI9341.h>
-#include <Adafruit_FT6206.h>
+#include <TFT_eSPI.h>
+#include <XPT2046_Touchscreen.h>
 #include <functional>
 
 #define MAYAR_BASE_URL "https://api.mayar.id/hl/v1"
@@ -79,7 +78,7 @@ private:
 
 class TFTKeypad {
 public:
-  TFTKeypad(Adafruit_ILI9341& display, Adafruit_FT6206& touch);
+  TFTKeypad(TFT_eSPI& display, XPT2046_Touchscreen& touch);
 
   void   begin();
   void   draw();
@@ -95,8 +94,8 @@ public:
   void process();
 
 private:
-  Adafruit_ILI9341* _tft;
-  Adafruit_FT6206*  _ctp;
+  TFT_eSPI*           _tft;
+  XPT2046_Touchscreen* _ctp;
   String            _value;
   unsigned long     _lastTouch;
   bool              _wasReleased;
@@ -118,7 +117,7 @@ private:
 
 class TFTImageDisplay {
 public:
-  explicit TFTImageDisplay(Adafruit_GFX& display);
+  explicit TFTImageDisplay(TFT_eSPI& display);
 
   /**
    * Download and render a PNG image.
@@ -148,7 +147,7 @@ public:
   void resetOffset();
 
 private:
-  Adafruit_GFX* _display;
+  TFT_eSPI* _display;
   int  _targetW        = 0;
   int  _targetH        = 0;
   int  _origW          = 0;

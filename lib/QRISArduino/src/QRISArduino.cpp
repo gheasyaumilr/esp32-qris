@@ -254,7 +254,7 @@ const char TFTKeypad::KEY_LABEL[4][3] = {
 #define KP_C_LABEL 0x8C51
 #define KP_C_DIV 0x4208
 
-TFTKeypad::TFTKeypad(Adafruit_ILI9341 &display, Adafruit_FT6206 &touch)
+TFTKeypad::TFTKeypad(TFT_eSPI &display, XPT2046_Touchscreen &touch)
     : _tft(&display), _ctp(&touch), _value(""), _lastTouch(0),
       _wasReleased(true) {}
 
@@ -279,10 +279,8 @@ void TFTKeypad::updateDisplay() {
   String disp = _value.isEmpty() ? "0" : _value;
   _tft->setTextSize(3);
   _tft->setTextColor(KP_C_TEXT);
-  int16_t bx, by;
-  uint16_t bw, bh;
-  _tft->getTextBounds(disp.c_str(), 0, 0, &bx, &by, &bw, &bh);
-  int xPos = SCREEN_W - 22 - bw - bx;
+  uint32_t bw = _tft->textWidth(disp);
+  int xPos = SCREEN_W - 22 - bw;
   if (xPos < 22)
     xPos = 22;
   _tft->fillRect(22, 46, SCREEN_W - 44, 40, KP_C_DISPLAY);
@@ -400,10 +398,9 @@ void TFTKeypad::drawKey(int row, int col, bool pressed) {
   _tft->setTextSize((k == 'O') ? 2 : 3);
   _tft->setTextColor(fg);
 
-  int16_t bx, by;
-  uint16_t bw, bh;
-  _tft->getTextBounds(str, 0, 0, &bx, &by, &bw, &bh);
-  _tft->setCursor(x + (KEY_W - bw) / 2 - bx, y + (KEY_H - bh) / 2 - by + 1);
+  uint32_t bw = _tft->textWidth(str);
+  uint32_t bh = (uint32_t)_tft->fontHeight();
+  _tft->setCursor(x + (KEY_W - bw) / 2, y + (KEY_H - bh) / 2 + 1);
   _tft->print(str);
 }
 
@@ -413,7 +410,7 @@ void TFTKeypad::drawKey(int row, int col, bool pressed) {
 
 TFTImageDisplay *TFTImageDisplay::_instance = nullptr;
 
-TFTImageDisplay::TFTImageDisplay(Adafruit_GFX &display)
+TFTImageDisplay::TFTImageDisplay(TFT_eSPI &display)
     : _display(&display), _offsetX(0), _offsetY(0), _offsetOverride(false) {}
 
 bool TFTImageDisplay::show(const String &url, int targetWidth, int targetHeight,
@@ -432,7 +429,7 @@ bool TFTImageDisplay::show(const String &url, int targetWidth, int targetHeight,
   _instance = this;
 
   // Clear only the render area – leaves surrounding UI intact
-  _display->fillRect(_offsetX, _offsetY, _targetW, _targetH, ILI9341_BLACK);
+  _display->fillRect(_offsetX, _offsetY, _targetW, _targetH, TFT_BLACK);
 
   return downloadAndDecode(url, timeoutSec, progressCb);
 }
