@@ -256,7 +256,11 @@ const char TFTKeypad::KEY_LABEL[4][3] = {
 
 TFTKeypad::TFTKeypad(TFT_eSPI &display, XPT2046_Touchscreen &touch)
     : _tft(&display), _ctp(&touch), _value(""), _lastTouch(0),
-      _wasReleased(true) {}
+      _wasReleased(true),
+      // Defaults = user calibration measured in rotation 1, transformed to
+      // rotation 0 (portrait 240x320). Tune via setCalibration().
+      _calMinX(527), _calMaxX(3461), _calMinY(404), _calMaxY(3603),
+      _debug(false) {}
 
 void TFTKeypad::begin() {
   _tft->fillScreen(KP_C_BG);
@@ -304,6 +308,14 @@ void TFTKeypad::onDigit(std::function<void(char)> cb) { _digitCb = cb; }
 void TFTKeypad::onDel(std::function<void()> cb) { _delCb = cb; }
 void TFTKeypad::onOk(std::function<void()> cb) { _okCb = cb; }
 
+void TFTKeypad::setCalibration(int minX, int maxX, int minY, int maxY) {
+  _calMinX = minX;
+  _calMaxX = maxX;
+  _calMinY = minY;
+  _calMaxY = maxY;
+}
+void TFTKeypad::setDebug(bool enable) { _debug = enable; }
+
 void TFTKeypad::process() {
   if (!_ctp->touched()) {
     _wasReleased = true;
@@ -325,8 +337,19 @@ void TFTKeypad::process() {
   _lastTouch = now;
 
   TS_Point p = _ctp->getPoint();
-  int tx = constrain(SCREEN_W - p.x, 0, SCREEN_W - 1);
-  int ty = constrain(SCREEN_H - p.y, 0, SCREEN_H - 1);
+  int tx = constrain(map(p.x, _calMinX, _calMaxX, 0, SCREEN_W - 1), 0, SCREEN_W - 1);
+  int ty = constrain(map(p.y, _calMinY, _calMaxY, 0, SCREEN_H - 1), 0, SCREEN_H - 1);
+
+  if (_debug) {
+    Serial.print("[TFTKeypad] raw=");
+    Serial.print(p.x);
+    Serial.print(",");
+    Serial.print(p.y);
+    Serial.print(" -> ");
+    Serial.print(tx);
+    Serial.print(",");
+    Serial.println(ty);
+  }
 
   for (int r = 0; r < 4; r++) {
     for (int c = 0; c < 3; c++) {

@@ -91,6 +91,19 @@ public:
   void onDel(std::function<void()> callback);
   void onOk(std::function<void()> callback);
 
+  /**
+   * Set raw touch calibration (XPT2046 coordinates).
+   *
+   * The ranges are the minimum/maximum raw values reported by the touch
+   * controller at the current touch rotation. Ascending values map to
+   * increasing screen coordinates; pass them reversed if the axis is
+   * mirrored on your hardware.
+   */
+  void setCalibration(int minX, int maxX, int minY, int maxY);
+
+  /** Print raw and mapped touch coordinates over Serial for tuning. */
+  void setDebug(bool enable);
+
   void process();
 
 private:
@@ -99,6 +112,12 @@ private:
   String            _value;
   unsigned long     _lastTouch;
   bool              _wasReleased;
+
+  int   _calMinX;
+  int   _calMaxX;
+  int   _calMinY;
+  int   _calMaxY;
+  bool  _debug;
 
   std::function<void(char)> _digitCb;
   std::function<void()>     _delCb;

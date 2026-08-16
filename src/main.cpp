@@ -1,4 +1,4 @@
-#include <Arduino.h>
+﻿#include <Arduino.h>
 #include <SPI.h>
 #include <TFT_eSPI.h>
 #include <XPT2046_Touchscreen.h>
@@ -9,6 +9,9 @@
 // ============================================================
 // TOUCH PIN
 // ============================================================
+
+#define relay 22
+int durasi = 0;
 
 #define TOUCH_CS   33
 #define TOUCH_IRQ  36
@@ -63,19 +66,12 @@ TFTImageDisplay imageDisplay(
 
 enum AppState {
   STATE_IDLE,
-
   STATE_LOADING_GET_BALANCE,
-
   STATE_LOADING_CREATE_QR,
-
   STATE_LOADING_DOWNLOAD_QR,
-
   STATE_SHOW_QR_POLLING,
-
   STATE_SUCCESS,
-
   STATE_TIMEOUT,
-
   STATE_WAITING_BACK
 };
 
@@ -344,6 +340,9 @@ void setup() {
 
   Serial.begin(115200);
 
+  pinMode(relay, OUTPUT);
+  digitalWrite(relay, HIGH);
+
   delay(500);
 
   Serial.println();
@@ -386,7 +385,8 @@ void setup() {
 
   tft.init();
 
-  tft.setRotation(1);
+  // Portrait 240x320 (rotasi 0) - layout keypad & QR didesain portrait
+  tft.setRotation(0);
 
   tft.fillScreen(
     TFT_BLACK
@@ -453,7 +453,8 @@ void setup() {
     }
   }
 
-  touch.setRotation(1);
+  // Rotasi touch harus sama dengan rotasi TFT
+  touch.setRotation(0);
 
   Serial.println(
     "Touch OK"
@@ -566,6 +567,29 @@ void setup() {
   // ==========================================================
 
   keypad.begin();
+
+  // ----------------------------------------------------------
+  // KALIBRASI TOUCH (rotasi 0 / portrait 240x320)
+  //
+  // Nilai kalibrasi dari test/3_kalibrasi_touchscreen (rotasi 1):
+  //   TS_MINX=404 TS_MAXX=3603 TS_MINY=634 TS_MAXY=3568
+  //
+  // Ditransformasi ke rotasi 0 (XPT2046 rot0: x=4095-y, y=x):
+  //   X: 4095-3568=527 .. 4095-634=3461
+  //   Y: 404 .. 3603
+  //
+  // Jika sumbu terbalik (touch kiri-kanan/atas-bawah tertukar),
+  // tukar nilai min/max, mis: setCalibration(3461, 527, 3603, 404).
+  // ----------------------------------------------------------
+
+  keypad.setCalibration(
+    527,
+    3461,
+    404,
+    3603
+  );
+
+  keypad.setDebug(true); // ganti false setelah touch benar
 
   // ==========================================================
   // DIGIT BUTTON
@@ -1222,6 +1246,14 @@ void loop() {
       tft.print(
         amtBuf
       );
+
+      //LOGIKA KETIKA PEMBAYARAN BERHASIL, AKAN MENYALAKAN RELAY SELAMA 10 DETIK PER 1000 RUPIAH
+                durasi = transAmount * 10;
+          //1000 ruiah = 10 detik
+                    //nyalakan relay
+          digitalWrite(relay, LOW);
+          delay(durasi);
+          digitalWrite(relay, HIGH);
 
       // ------------------------------------------------------
       // BACK MESSAGE
